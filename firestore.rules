@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Starter rules only — good enough to get the app running, not a final
+// security review. Tighten before handling real student data:
+//  - restrict writes to fields you expect
+//  - consider validating email domain server-side (Firestore rules can't
+//    read the Auth email domain restriction reliably on their own)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/public/data/{collection}/{docId} {
+      allow read: if true;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+  }
+}
