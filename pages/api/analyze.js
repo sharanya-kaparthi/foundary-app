@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 // Server-side AI Visual Analysis route.
 // Keeps the Gemini API key out of the browser bundle — set GEMINI_API_KEY
 // (no NEXT_PUBLIC_ prefix) in .env.local and in your Vercel project settings.
