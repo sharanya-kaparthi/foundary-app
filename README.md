@@ -56,6 +56,21 @@ vercel env add NEXT_PUBLIC_FIREBASE_API_KEY
 vercel --prod
 ```
 
+## App structure (routes)
+
+Real Next.js routes with client-side navigation; shared shell in `components/shell/AppShell.jsx`, auth/role guard in `components/shell/Protected.jsx`, all Firebase state + actions in `context/AppDataContext.jsx`.
+
+- Public: `/login`, `/register`, `/forgot-password`
+- Users: `/home`, `/report-lost`, `/report-found`, `/browse`, `/item/[id]`, `/matches/[id]`, `/my-items?tab=`, `/notifications`, `/profile`, `/chat/[id]` (id = claim id), `/issues`, `/issues/new`, `/issues/[id]`
+- Custodians (role-protected): `/custodian`, `/custodian/submissions`, `/custodian/items`, `/custodian/claims`, `/custodian/unclaimed`
+
+## Stubbed in the UI (no backend yet)
+
+- Trusted-place hand-over: the finder's "pending" state is stored only in their browser (localStorage). Custodian "Pending Submissions" lists all active found items.
+- Match scores (`lib/matching.js`) are a client-side heuristic over real items, not a Gemini/AI call.
+- "Not My Item" dismissals and notification read-state are per-browser (localStorage).
+- Trusted place name on the custodian dashboard is hard-coded; Appearance/dark mode is "coming soon".
+
 ## What's mocked / not yet wired up
 
 - Custodian accounts must currently be created directly in Firestore/Auth by an admin (there's no management dashboard yet — that's a later phase per the project plan).

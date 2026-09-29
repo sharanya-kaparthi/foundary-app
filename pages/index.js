@@ -1,9 +1,25 @@
-import dynamic from 'next/dynamic';
-
-// Firebase Auth/Firestore only work in the browser, so this is loaded
-// client-side only (no server-side rendering) to avoid build errors.
-const FoundaryApp = dynamic(() => import('../components/FoundaryApp'), { ssr: false });
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAppData } from '../context/AppDataContext';
+import Spinner from '../components/ui/Spinner';
 
 export default function Home() {
-  return <FoundaryApp />;
+  const router = useRouter();
+  const { user, userRole, authLoading } = useAppData();
+
+  useEffect(() => {
+    if (authLoading) return;
+    const isRealUser = user && !user.isAnonymous;
+    if (!isRealUser) {
+      router.replace('/login');
+    } else {
+      router.replace(userRole === 'custodian' ? '/custodian' : '/home');
+    }
+  }, [authLoading, user, userRole, router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-paper">
+      <Spinner label="Loading Foundary…" />
+    </div>
+  );
 }

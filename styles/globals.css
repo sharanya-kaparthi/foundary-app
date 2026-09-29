@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Public+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,5 +9,61 @@ html, body, #__next {
 }
 
 body {
-  background-color: #0f172a; /* slate-900, matches the app shell background */
+  background-color: #F3F1EA;
+  color: #14212B;
+  font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Thin, quiet scrollbars inside the app shell */
+.app-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.app-scroll::-webkit-scrollbar-thumb {
+  background: #E4E0D6;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.input {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E4E0D6;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.875rem;
+  color: #14212B;
+}
+.input:focus { outline: 2px solid #14212B; outline-offset: 1px; }
+.btn-primary {
+  width: 100%;
+  background: #14212B;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+}
+.btn-primary:disabled { opacity: 0.6; }
+.btn-primary.tone-lost { background: #A6402C; }
+.btn-primary.tone-found { background: #2E5C48; }
+
+.focus-ring:focus-visible {
+  outline: 2px solid #14212B;
+  outline-offset: 2px;
+}
+
+/* One deliberate load-in for the app shell only — nothing else animates on mount */
+@keyframes shell-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.shell-in {
+  animation: shell-in 240ms ease-out;
 }
