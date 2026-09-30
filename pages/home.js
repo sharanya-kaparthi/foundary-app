@@ -2,6 +2,7 @@ import { useRouter } from 'next/router';
 import { Search, PackageX, PackageCheck, ChevronRight } from 'lucide-react';
 import AppShell from '../components/shell/AppShell';
 import Protected from '../components/shell/Protected';
+import HomeMatches from '../components/items/HomeMatches';
 import { useAppData } from '../context/AppDataContext';
 
 function HomeContent() {
@@ -65,6 +66,8 @@ function HomeContent() {
           </span>
           <ChevronRight className="w-4 h-4 text-ink-faint flex-shrink-0" />
         </button>
+
+        <HomeMatches />
       </div>
     </AppShell>
   );

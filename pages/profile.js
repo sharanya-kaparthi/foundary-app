@@ -4,6 +4,7 @@ import { User, Bell, Moon, HelpCircle, Trash2, LogOut, ChevronRight, ShieldCheck
 import AppShell from '../components/shell/AppShell';
 import Protected from '../components/shell/Protected';
 import Modal from '../components/ui/Modal';
+import MyChats from '../components/chats/MyChats';
 import IssuesAndComplaints from '../components/issues/IssuesAndComplaints';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import { useAppData } from '../context/AppDataContext';
@@ -53,6 +54,8 @@ function ProfileContent() {
           <ChevronRight className="w-4 h-4" />
         </button>
       )}
+
+      <MyChats />
 
       <IssuesAndComplaints />
 

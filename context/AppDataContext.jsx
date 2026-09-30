@@ -41,6 +41,10 @@ export function AppDataProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [messages, setMessages] = useState([]);
   const [issues, setIssues] = useState([]);
+  // True once items, claims and messages have each delivered a first snapshot (or errored),
+  // so lists derived from them can show a loading state instead of a false empty state.
+  const [loaded, setLoaded] = useState({ items: false, claims: false, messages: false });
+  const markLoaded = useCallback((name) => setLoaded((l) => (l[name] ? l : { ...l, [name]: true })), []);
 
   const [isOnline, setIsOnline] = useState(true);
   const [toast, setToast] = useState(null);
@@ -101,11 +105,13 @@ export function AppDataProvider({ children }) {
 
     const unsubItems = onSnapshot(getCollectionRef('items'), (snapshot) => {
       setItems(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error('Error fetching items:', err));
+      markLoaded('items');
+    }, (err) => { console.error('Error fetching items:', err); markLoaded('items'); });
 
     const unsubClaims = onSnapshot(getCollectionRef('claims'), (snapshot) => {
       setClaims(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error('Error fetching claims:', err));
+      markLoaded('claims');
+    }, (err) => { console.error('Error fetching claims:', err); markLoaded('claims'); });
 
     const unsubNotifs = onSnapshot(getCollectionRef('notifications'), (snapshot) => {
       setNotifications(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -113,7 +119,8 @@ export function AppDataProvider({ children }) {
 
     const unsubMsgs = onSnapshot(getCollectionRef('messages'), (snapshot) => {
       setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error('Error fetching messages:', err));
+      markLoaded('messages');
+    }, (err) => { console.error('Error fetching messages:', err); markLoaded('messages'); });
 
     const unsubIssues = onSnapshot(getCollectionRef('issues'), (snapshot) => {
       setIssues(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -126,7 +133,7 @@ export function AppDataProvider({ children }) {
       unsubMsgs();
       unsubIssues();
     };
-  }, [user]);
+  }, [user, markLoaded]);
 
   // ---- Auth actions ----
   const loginWithEmail = useCallback(async (email, password) => {
@@ -403,6 +410,7 @@ export function AppDataProvider({ children }) {
 
   const value = {
     user, userRole, authLoading, firebaseStatus, isOnline,
+    dataReady: loaded.items && loaded.claims && loaded.messages,
     items, claims, notifications, messages, issues,
     toast, showToast, dismissToast: () => setToast(null),
     loginWithEmail, registerWithEmail, sendResetEmail, handleSignOut, deleteAccount,
