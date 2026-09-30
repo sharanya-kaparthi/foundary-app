@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { ArrowLeft, Layers, Bell, User as UserIcon } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 import OfflineBanner from '../ui/OfflineBanner';
+import { goBack } from '../../lib/navigation';
 import ToastHost from '../ui/ToastHost';
 
 // The one shared visual frame for every authenticated screen. Top-level tabs
@@ -14,6 +15,12 @@ import ToastHost from '../ui/ToastHost';
 export default function AppShell({ children, back, title, customPlaceName }) {
   const router = useRouter();
   const { user, userRole, notifications, readNotificationIds } = useAppData();
+
+  // `back` is either a fallback path (string) or `true`. Back goes to the page the
+  // user actually came from; the fallback is only used when there is no in-app
+  // history (deep link, refresh). Custodians fall back to their own desk, not /home.
+  const requestedFallback = typeof back === 'string' ? back : '/home';
+  const backFallback = userRole === 'custodian' && requestedFallback === '/home' ? '/custodian' : requestedFallback;
 
   const unread = notifications.filter((n) => !readNotificationIds.includes(n.id)).length;
 
@@ -27,11 +34,12 @@ export default function AppShell({ children, back, title, customPlaceName }) {
         {back ? (
           <div className="flex items-center gap-2 min-w-0">
             <button
-              onClick={() => (typeof back === 'string' ? router.push(back) : router.back())}
+              onClick={() => goBack(router, backFallback)}
               aria-label="Go back"
-              className="p-1.5 -ml-1.5 rounded-lg text-ink-soft focus-ring"
+              className="flex items-center gap-1 p-1.5 -ml-1.5 rounded-lg text-ink-soft focus-ring flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Back</span>
             </button>
             <h1 className="font-display font-semibold text-base text-ink truncate">{title}</h1>
           </div>

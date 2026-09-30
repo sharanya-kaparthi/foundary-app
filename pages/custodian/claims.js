@@ -39,7 +39,7 @@ function ClaimsContent() {
               <StatusBadge label={claimStatusLabel(c.status)} tone={c.status === 'verified' ? 'found' : c.status === 'rejected' ? 'lost' : 'brass'} />
             </div>
             <p className="text-xs text-ink-faint">Claimant: {(c.claimerName || '').split(' [')[0]} · {formatDate(c.createdAt)}</p>
-            {c.status === 'pending' && (
+            {c.status === 'pending' && !claims.some((x) => x.itemId === c.itemId && x.status === 'verified') && (
               <div className="flex gap-2 pt-1">
                 <button onClick={() => decide(c.id, 'rejected')} className="flex-1 py-1.5 rounded-lg text-xs font-semibold border border-line text-ink-soft">Reject</button>
                 <button onClick={() => decide(c.id, 'verified')} className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-found text-white">Verify &amp; Approve</button>

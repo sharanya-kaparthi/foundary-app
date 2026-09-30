@@ -34,14 +34,14 @@ function NewIssueContent() {
       <AppShell back="/issues" title="Report an Issue">
         <div className="text-center py-14">
           <p className="font-display text-lg text-ink mb-1.5">Your issue has been sent to management</p>
-          <button onClick={() => router.push('/issues')} className="text-sm font-semibold text-ink underline mt-3">View My Issues</button>
+          <button onClick={() => router.replace('/issues')} className="text-sm font-semibold text-ink underline mt-3">View My Issues</button>
         </div>
       </AppShell>
     );
   }
 
   return (
-    <AppShell back title="Report an Issue">
+    <AppShell back="/issues" title="Report an Issue">
       {relatedItem && (
         <div className="flex items-center gap-2.5 bg-surface border border-line rounded-xl p-2.5 mb-4">
           <img src={relatedItem.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />

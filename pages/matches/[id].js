@@ -44,7 +44,7 @@ function MatchesContent() {
   };
 
   return (
-    <AppShell back title="Possible Matches">
+    <AppShell back="/my-items" title="Possible Matches">
       <p className="text-sm text-ink-faint mb-4">
         These items have a 70% or higher similarity to your report for <span className="font-semibold text-ink-soft">{item.title}</span>.
       </p>

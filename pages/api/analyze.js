@@ -1,3 +1,5 @@
+import { normalizeAiAnalysis } from '../../lib/aiResult';
+
 export const config = {
   api: {
     bodyParser: {
@@ -51,13 +53,21 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Gemini API error ${response.status}: ${data?.error?.message || 'unknown error'}`);
+    }
     const textResult = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResult) {
       throw new Error('No content returned from the AI model.');
     }
 
-    const parsed = JSON.parse(textResult);
-    return res.status(200).json(parsed);
+    // Gemini may return keyFeatures (etc.) as arrays; the client and Firestore
+    // expect plain strings. A result with nothing usable is a failure, not a success.
+    const analysis = normalizeAiAnalysis(JSON.parse(textResult));
+    if (!analysis) {
+      throw new Error('The AI model returned an unusable analysis.');
+    }
+    return res.status(200).json(analysis);
   } catch (err) {
     console.error('AI analysis error:', err);
     return res.status(500).json({ error: 'AI analysis failed.' });

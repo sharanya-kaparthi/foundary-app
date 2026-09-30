@@ -4,6 +4,7 @@ import { User, Bell, Moon, HelpCircle, Trash2, LogOut, ChevronRight, ShieldCheck
 import AppShell from '../components/shell/AppShell';
 import Protected from '../components/shell/Protected';
 import Modal from '../components/ui/Modal';
+import IssuesAndComplaints from '../components/issues/IssuesAndComplaints';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import { useAppData } from '../context/AppDataContext';
 
@@ -29,9 +30,7 @@ function ProfileContent() {
   };
 
   return (
-    <AppShell>
-      <h2 className="font-display text-xl font-semibold text-ink mb-4">Profile</h2>
-
+    <AppShell back="/home" title="Profile">
       <div className="bg-surface border border-line rounded-2xl p-4 shadow-card flex items-center gap-3 mb-5">
         <div className="w-12 h-12 rounded-full bg-ink text-white flex items-center justify-center font-display font-semibold text-lg flex-shrink-0">
           {name.charAt(0).toUpperCase()}
@@ -54,6 +53,8 @@ function ProfileContent() {
           <ChevronRight className="w-4 h-4" />
         </button>
       )}
+
+      <IssuesAndComplaints />
 
       <div className="bg-surface border border-line rounded-2xl divide-y divide-line overflow-hidden mb-5">
         <SettingRow icon={User} label="Account" onClick={() => showToast('Account settings coming soon.')} />

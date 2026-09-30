@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import {
   doc,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -19,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { getFirebase, getCollectionRef, appId } from '../lib/firebase';
 import { humanizeFirebaseError } from '../lib/constants';
+import { aiTagsFrom } from '../lib/aiResult';
 
 const AppDataContext = createContext(null);
 
@@ -219,7 +221,8 @@ export function AppDataProvider({ children }) {
       reporterUid: user ? user.uid : 'anon',
       reporterName: user?.displayName || 'Campus Member',
       createdAt: new Date().toISOString(),
-      aiTags: report.aiSuggestions ? [report.aiSuggestions.estimatedColor, report.aiSuggestions.keyFeatures].filter(Boolean) : []
+      // Always a flat array of strings — Firestore rejects nested arrays.
+      aiTags: aiTagsFrom(report.aiSuggestions)
     };
 
     const docRef = await addDoc(getCollectionRef('items'), newItem);
@@ -262,27 +265,66 @@ export function AppDataProvider({ children }) {
       itemId: item.id
     });
 
-    const isCorrect = item.secretAnswer &&
-      claimedAnswer.trim().toLowerCase() === item.secretAnswer.trim().toLowerCase();
+    // A correct answer verifies the CLAIM only (which opens the chat). It must
+    // not change item.status — the claimant's explicit "I Received the Item"
+    // action in the chat (confirmItemClaimed) is the only thing that does.
+    // If another claim on this item is already verified, leave this one pending.
+    const alreadyHasVerifiedClaim = claims.some((c) => c.itemId === item.id && c.status === 'verified');
+    const isCorrect = Boolean(
+      item.secretAnswer &&
+      item.status !== 'claimed' &&
+      !alreadyHasVerifiedClaim &&
+      claimedAnswer.trim().toLowerCase() === item.secretAnswer.trim().toLowerCase()
+    );
 
     if (isCorrect) {
       await updateDoc(doc(getFirebase().db, 'artifacts', appId, 'public', 'data', 'claims', docRef.id), { status: 'verified' });
-      await updateDoc(doc(getFirebase().db, 'artifacts', appId, 'public', 'data', 'items', item.id), { status: 'claimed' });
     }
 
     return { id: docRef.id, verified: isCorrect };
-  }, [user]);
+  }, [user, claims]);
 
+  // Approves or rejects a CLAIM. This never changes item.status: a verified
+  // claim only opens the handover chat. See confirmItemClaimed below.
   const handleVerifyClaim = useCallback(async (claimId, newStatus) => {
+    const claimObj = claims.find((c) => c.id === claimId);
+    if (
+      newStatus === 'verified' && claimObj &&
+      claims.some((c) => c.itemId === claimObj.itemId && c.id !== claimId && c.status === 'verified')
+    ) {
+      throw new Error('Another claim on this item is already verified.');
+    }
     const claimRef = doc(getFirebase().db, 'artifacts', appId, 'public', 'data', 'claims', claimId);
     await updateDoc(claimRef, { status: newStatus });
-
-    const claimObj = claims.find((c) => c.id === claimId);
-    if (claimObj && newStatus === 'verified') {
-      const itemRef = doc(getFirebase().db, 'artifacts', appId, 'public', 'data', 'items', claimObj.itemId);
-      await updateDoc(itemRef, { status: 'claimed' });
-    }
   }, [claims]);
+
+  // The ONLY place an item becomes 'claimed'. Called when the claimant
+  // explicitly confirms receipt (chat button, or the item page for items held
+  // at a trusted place). Reads fresh docs so it doesn't trust stale UI state.
+  const confirmItemClaimed = useCallback(async (claimId) => {
+    if (!user) throw new Error('You need to be signed in.');
+    const { db } = getFirebase();
+    const claimSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'claims', claimId));
+    if (!claimSnap.exists()) throw new Error('Claim not found.');
+    const claim = claimSnap.data();
+    if (claim.claimerUid !== user.uid) throw new Error('Only the claimant can confirm receipt.');
+    if (claim.status !== 'verified') throw new Error('This claim has not been verified yet.');
+
+    const itemRef = doc(db, 'artifacts', appId, 'public', 'data', 'items', claim.itemId);
+    const itemSnap = await getDoc(itemRef);
+    if (!itemSnap.exists()) throw new Error('Item not found.');
+    const current = itemSnap.data().status;
+    if (current === 'claimed') return { alreadyClaimed: true };
+    if (current !== 'active' && current !== 'custodian_held') throw new Error('This item cannot be marked as claimed.');
+
+    await updateDoc(itemRef, {
+      status: 'claimed',
+      claimedAt: new Date().toISOString(),
+      claimedByUid: user.uid,
+      claimedViaClaimId: claimId
+    });
+    return { alreadyClaimed: false };
+  }, [user]);
 
   // ---- Messaging ----
   const sendMessage = useCallback(async (claimId, text) => {
@@ -365,7 +407,7 @@ export function AppDataProvider({ children }) {
     toast, showToast, dismissToast: () => setToast(null),
     loginWithEmail, registerWithEmail, sendResetEmail, handleSignOut, deleteAccount,
     triggerAiAnalysis, submitReport, deleteItem,
-    submitClaim, handleVerifyClaim, sendMessage,
+    submitClaim, handleVerifyClaim, confirmItemClaimed, sendMessage,
     handleEscalateToCustodian, handleMarkUnclaimed, reportIssue,
     markNotificationsRead, readNotificationIds
   };

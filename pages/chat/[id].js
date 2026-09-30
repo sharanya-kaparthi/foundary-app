@@ -10,7 +10,7 @@ import { useAppData } from '../../context/AppDataContext';
 function ChatContent() {
   const router = useRouter();
   const { id } = router.query;
-  const { user, claims, items, messages, sendMessage, handleVerifyClaim, showToast } = useAppData();
+  const { user, claims, items, messages, sendMessage, confirmItemClaimed, showToast } = useAppData();
   const [text, setText] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -22,6 +22,15 @@ function ChatContent() {
     return (
       <AppShell back="/my-items" title="Chat">
         <EmptyState title="Conversation not found" />
+      </AppShell>
+    );
+  }
+
+  // The chat only opens once the claim has been verified.
+  if (claim.status !== 'verified') {
+    return (
+      <AppShell back="/my-items" title="Chat">
+        <EmptyState title="Chat isn't open yet" message="The chat opens once the claim has been verified." />
       </AppShell>
     );
   }
@@ -41,11 +50,13 @@ function ChatContent() {
   const confirmReceipt = async () => {
     setConfirming(true);
     try {
-      await handleVerifyClaim(claim.id, 'verified');
+      // The claimant's explicit confirmation is the only thing that sets item.status = 'claimed'.
+      await confirmItemClaimed(claim.id);
       showToast('Item recovered.');
       setShowConfirm(false);
-    } catch {
-      showToast('Something went wrong. Please try again.');
+    } catch (err) {
+      console.error('confirmItemClaimed failed:', err);
+      showToast(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setConfirming(false);
     }
@@ -86,9 +97,13 @@ function ChatContent() {
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <button onClick={() => setShowConfirm(true)} className="w-full text-center text-xs font-semibold text-ink-soft py-1">
-              I Received the Item
-            </button>
+            {isClaimer ? (
+              <button onClick={() => setShowConfirm(true)} className="w-full text-center text-xs font-semibold text-ink-soft py-1">
+                I Received the Item
+              </button>
+            ) : (
+              <p className="text-center text-[11px] text-ink-faint py-1">The item is marked as recovered once the claimant confirms they received it.</p>
+            )}
           </div>
         )}
       </div>

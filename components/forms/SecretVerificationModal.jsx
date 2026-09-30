@@ -5,13 +5,14 @@ import Modal from '../ui/Modal';
 import { useAppData } from '../../context/AppDataContext';
 
 export default function SecretVerificationModal({ open, onClose, item }) {
-  const { submitClaim } = useAppData();
+  const { submitClaim, confirmItemClaimed, showToast } = useAppData();
   const router = useRouter();
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null); // null | 'verified' | 'pending'
   const [claimId, setClaimId] = useState(null);
+  const [receiving, setReceiving] = useState(false);
 
   if (!item) return null;
 
@@ -35,6 +36,22 @@ export default function SecretVerificationModal({ open, onClose, item }) {
     }
   };
 
+  // Custodian-held items have no chat: the claimant's explicit "I Received the
+  // Item" click (after collecting it) is what marks the item as claimed.
+  const handleReceived = async () => {
+    setReceiving(true);
+    try {
+      await confirmItemClaimed(claimId);
+      showToast('Item recovered.');
+      close();
+    } catch (err) {
+      console.error('confirmItemClaimed failed:', err);
+      showToast(err?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setReceiving(false);
+    }
+  };
+
   const close = () => {
     setAnswer(''); setError(''); setResult(null);
     onClose();
@@ -51,8 +68,8 @@ export default function SecretVerificationModal({ open, onClose, item }) {
               : 'Your answer matches. You can now contact the finder to arrange the handover.'}
           </p>
           {item.status === 'custodian_held' ? (
-            <button onClick={close} className="w-full py-2.5 rounded-xl bg-ink text-white text-sm font-semibold focus-ring">
-              I Received the Item
+            <button onClick={handleReceived} disabled={receiving} className="w-full py-2.5 rounded-xl bg-ink text-white text-sm font-semibold focus-ring disabled:opacity-60">
+              {receiving ? 'Confirming…' : 'I Received the Item'}
             </button>
           ) : (
             <button

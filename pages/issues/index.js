@@ -3,17 +3,24 @@ import { AlertTriangle, Plus } from 'lucide-react';
 import AppShell from '../../components/shell/AppShell';
 import Protected from '../../components/shell/Protected';
 import EmptyState from '../../components/ui/EmptyState';
-import StatusBadge from '../../components/ui/StatusBadge';
+import IssueRow from '../../components/issues/IssueRow';
 import { useAppData } from '../../context/AppDataContext';
-import { formatDate } from '../../lib/constants';
+import { issuesReportedBy, issuesAbout, relatedChatClaim } from '../../lib/issues';
+
+const TABS = [
+  { key: 'by', label: 'Reported by me' },
+  { key: 'about', label: 'About me' }
+];
 
 function IssuesContent() {
   const router = useRouter();
-  const { user, issues } = useAppData();
+  const { user, issues, items, claims } = useAppData();
+  const activeTab = router.query.tab === 'about' ? 'about' : 'by';
+  const setTab = (tab) => router.replace({ pathname: '/issues', query: { tab } }, undefined, { shallow: true });
 
-  const mine = issues
-    .filter((iss) => iss.reportedByUid === user?.uid)
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const list = activeTab === 'by'
+    ? issuesReportedBy(issues, user?.uid)
+    : issuesAbout(issues, items, claims, user?.uid);
 
   return (
     <AppShell back="/profile" title="My Issues">
@@ -24,23 +31,30 @@ function IssuesContent() {
         <Plus className="w-4 h-4" /> Report an Issue
       </button>
 
-      {mine.length === 0 ? (
-        <EmptyState icon={AlertTriangle} title="No issues reported" message="Anything wrong with a claim, finder, or trusted place shows up here." />
+      <div className="flex bg-surface p-1 rounded-xl border border-line mb-4 text-xs">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 py-1.5 rounded-lg font-semibold ${activeTab === t.key ? 'bg-ink text-white' : 'text-ink-faint'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {list.length === 0 ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title={activeTab === 'by' ? 'No issues reported' : 'Nothing reported about you'}
+          message={activeTab === 'by'
+            ? 'Anything wrong with a claim, finder, or trusted place shows up here.'
+            : 'Issues other people report about you will show up here.'}
+        />
       ) : (
         <div className="space-y-2">
-          {mine.map((iss) => (
-            <button
-              key={iss.id}
-              onClick={() => router.push(`/issues/${iss.id}`)}
-              className="w-full text-left bg-surface border border-line rounded-xl p-3.5"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-ink">{iss.issueType || 'General issue'}</span>
-                <StatusBadge label={iss.status === 'open' ? 'Open' : iss.status} tone="brass" />
-              </div>
-              <p className="text-xs text-ink-faint mt-0.5 truncate">{iss.itemTitle}</p>
-              <p className="text-[11px] text-ink-faint mt-0.5">{formatDate(iss.timestamp)}</p>
-            </button>
+          {list.map((iss) => (
+            <IssueRow key={iss.id} issue={iss} chatClaimId={relatedChatClaim(iss, items, claims, user?.uid)?.id} />
           ))}
         </div>
       )}
