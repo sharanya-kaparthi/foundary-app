@@ -67,28 +67,44 @@ export function AppDataProvider({ children }) {
     };
   }, []);
 
-  // ---- Auth bootstrap — identical logic to the original single-file app ----
+  // ---- Auth bootstrap ----
+  // IMPORTANT: this must NOT call signInAnonymously() unconditionally. Doing
+  // so on every mount (including every refresh) races against Firebase
+  // restoring a real, already-authenticated Student/Custodian session — and
+  // signInAnonymously() will happily overwrite that real session with a new
+  // anonymous one, since it doesn't check who (if anyone) is already signed
+  // in. Instead we wait for Firebase's own first onAuthStateChanged callback
+  // (which reflects whatever session it actually restored, real or none) and
+  // only create an anonymous session if that first callback comes back null.
   useEffect(() => {
     const { auth } = getFirebase();
     if (!auth) return;
 
-    const initAuth = async () => {
-      try {
-        // Anonymous session so guests can browse before creating an account.
-        await signInAnonymously(auth);
-        setFirebaseStatus('connected');
-      } catch (err) {
-        console.warn('Firebase Auth fallback to Demo/Anonymous state:', err);
-        setFirebaseStatus('demo');
-      } finally {
-        setAuthLoading(false);
+    let initialCheckDone = false;
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!initialCheckDone) {
+        initialCheckDone = true;
+        if (!currentUser) {
+          // No session at all was restored — fall back to anonymous so
+          // guests can still browse. This re-triggers this same listener
+          // with the new anonymous user once it succeeds.
+          try {
+            await signInAnonymously(auth);
+          } catch (err) {
+            console.warn('Firebase Auth fallback to Demo/Anonymous state:', err);
+            setFirebaseStatus('demo');
+            setAuthLoading(false);
+          }
+          return;
+        }
       }
-    };
 
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // Reached for: a real restored session on first load, a freshly
+      // created anonymous session, or any later login/logout transition.
       setUser(currentUser);
+      setFirebaseStatus('connected');
+      setAuthLoading(false);
       if (currentUser?.displayName && currentUser.displayName.includes('[Custodian]')) {
         setUserRole('custodian');
       } else {
@@ -139,8 +155,9 @@ export function AppDataProvider({ children }) {
   const loginWithEmail = useCallback(async (email, password) => {
     const { auth } = getFirebase();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      return { ok: true };
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const role = credential.user?.displayName?.includes('[Custodian]') ? 'custodian' : 'student';
+      return { ok: true, role };
     } catch (err) {
       return { ok: false, error: humanizeFirebaseError(err.code || err.message) };
     }
