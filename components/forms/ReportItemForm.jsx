@@ -56,7 +56,12 @@ export default function ReportItemForm({ type }) {
       if (!isFound) {
         // Lost items check against existing found items for a same-session
         // "we found possible matches" nudge (real items, heuristic score).
-        matchCount = findMatches({ id: newId, title, type, category, location: resolvedLocation, description, createdAt: new Date().toISOString() }, items).length;
+        matchCount = findMatches({
+          id: newId, title, type, category, location: resolvedLocation, description,
+          brand, color, distinguishingFeatures: features, eventDate,
+          aiTags: aiSuggestions ? [aiSuggestions.estimatedColor, aiSuggestions.keyFeatures].filter(Boolean) : [],
+          createdAt: new Date().toISOString()
+        }, items).length;
       }
       setResult({ id: newId, matchCount });
     } catch (err) {
